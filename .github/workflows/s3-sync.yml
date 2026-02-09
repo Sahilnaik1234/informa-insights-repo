@@ -1,56 +1,28 @@
 name: Sync Static Assets to DEV S3
-
+ 
 on:
-  push:
+  pull_request:
     branches:
       - dev
-
+    types:
+      - closed
+ 
 jobs:
   sync-assets:
-    # Run ONLY if this push is a merge commit
-    if: contains(github.event.head_commit.message, 'Merge pull request')
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-
+ 
     steps:
-      # 1️⃣ Checkout repo
       - name: Checkout Repository
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
-
-      # 2️⃣ Configure AWS credentials (DEV)
-      - name: Configure AWS Credentials (DEV)
+ 
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
-
-      # 3️⃣ Debug changed files (proof)
-      - name: Debug changed files
+ 
+      - name: Sync Public Folder to DEV Bucket
         run: |
-          echo "Changed files from merge:"
-          git diff --name-only HEAD~1 HEAD
-
-      # 4️⃣ Detect changed folders
-      - name: Detect changed folders
-        id: changes
-        run: |
-          CHANGED_FOLDERS=$(git diff --name-only HEAD~1 HEAD \
-            | grep '^public/' \
-            | awk -F'/' 'NF>2 {print $2}' \
-            | sort -u \
-            | tr '\n' ' ' \
-            | sed 's/ *$//')
-
-          echo "folders=$CHANGED_FOLDERS" >> $GITHUB_OUTPUT
-          echo "Detected folders: $CHANGED_FOLDERS"
-
-      # 5️⃣ Sync ONLY changed folders
-      - name: Sync only changed folders to DEV S3
-        if: steps.changes.outputs.folders != ''
-        run: |
-          for folder in ${{ steps.changes.outputs.folders }}; do
-            echo "Syncing folder: $folder"
-            aws s3 sync public/$folder/ s3://${{ secrets.DEV_BUCKET }}/$folder/ --delete
-          done
+          aws s3 sync public/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
