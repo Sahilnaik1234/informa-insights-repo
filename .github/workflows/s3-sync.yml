@@ -13,9 +13,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
+      # 1️⃣ Checkout full history
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       # 2️⃣ Configure AWS credentials (DEV)
       - name: Configure AWS Credentials (DEV)
@@ -25,20 +27,26 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
-      # 3️⃣ Detect which folders changed inside public/
+      # 3️⃣ Detect changed folders using PR context (CORRECT)
       - name: Detect changed folders
         id: changes
         run: |
-          git fetch origin dev
-          CHANGED_FOLDERS=$(git diff --name-only origin/dev...HEAD \
+          echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
+          echo "Head SHA: ${{ github.event.pull_request.head.sha }}"
+
+          CHANGED_FOLDERS=$(git diff --name-only \
+            ${{ github.event.pull_request.base.sha }} \
+            ${{ github.event.pull_request.head.sha }} \
             | grep '^public/' \
-            | cut -d'/' -f2 \
-            | sort -u)
+            | awk -F'/' 'NF>2 {print $2}' \
+            | sort -u \
+            | tr '\n' ' ' \
+            | sed 's/ *$//')
 
-          echo "folders=$CHANGED_FOLDERS"
           echo "folders=$CHANGED_FOLDERS" >> $GITHUB_OUTPUT
+          echo "Detected folders: $CHANGED_FOLDERS"
 
-      # 4️⃣ Sync ONLY those changed folders
+      # 4️⃣ Sync ONLY changed folders
       - name: Sync only changed folders to DEV S3
         if: steps.changes.outputs.folders != ''
         run: |
