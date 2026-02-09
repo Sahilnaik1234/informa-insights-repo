@@ -1,4 +1,4 @@
-name: Sync Static Assets to DEV and STAGE S3
+name: Sync Static Assets to DEV S3
 
 on:
   pull_request:
@@ -13,10 +13,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout code
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # Step 1: Configure AWS Credentials (DEV account)
+      # 2️⃣ Configure AWS credentials (DEV)
       - name: Configure AWS Credentials (DEV)
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -24,20 +25,24 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
-      - name: Sync to DEV S3 Bucket
-        if: github.base_ref == 'dev'
+      # 3️⃣ Detect which folders changed inside public/
+      - name: Detect changed folders
+        id: changes
         run: |
-          aws s3 sync public/ s3://${{ secrets.DEV_BUCKET }}/ --delete
+          git fetch origin dev
+          CHANGED_FOLDERS=$(git diff --name-only origin/dev...HEAD \
+            | grep '^public/' \
+            | cut -d'/' -f2 \
+            | sort -u)
 
-      # # Step 2: Assume Role into STAGE account and sync
-      # - name: Assume Role into STAGE Account
-      #   if: github.base_ref == 'stage'
-      #   uses: aws-actions/configure-aws-credentials@v2
-      #   with:
-      #     role-to-assume: ${{ secrets.STAGE_ROLE_ARN }}
-      #     aws-region: ap-south-1
+          echo "folders=$CHANGED_FOLDERS"
+          echo "folders=$CHANGED_FOLDERS" >> $GITHUB_OUTPUT
 
-      # - name: Sync to STAGE S3 Bucket
-      #   if: github.base_ref == 'stage'
-      #   run: |
-      #     aws s3 sync public/ s3://${{ secrets.STAGE_BUCKET }}/ --delete
+      # 4️⃣ Sync ONLY those changed folders
+      - name: Sync only changed folders to DEV S3
+        if: steps.changes.outputs.folders != ''
+        run: |
+          for folder in ${{ steps.changes.outputs.folders }}; do
+            echo "Syncing folder: $folder"
+            aws s3 sync public/$folder/ s3://${{ secrets.DEV_BUCKET }}/$folder/ --delete
+          done
