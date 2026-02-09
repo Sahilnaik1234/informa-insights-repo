@@ -9,7 +9,6 @@ on:
 
 permissions:
   id-token: write
-  contents: read
 
 jobs:
   s3-sync:
@@ -17,67 +16,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-     
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      
-      - name: Detect changed folders
-        id: filter
-        uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            aviation:
-              - 'public/aviation/**'
-            connect:
-              - 'public/connect/**'
-            sli:
-              - 'public/sli/**'
-            investor_insights:
-              - 'public/investor-insights/**'
-
-      
-      - name: Configure AWS (STAGE role via OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_STAGE_ROLE_ARN }}
           aws-region: ap-south-1
 
-      - name: Verify AWS identity
-        run: aws sts get-caller-identity
-
-      
-      - name: Sync aviation DEV → STAGE
-        if: steps.filter.outputs.aviation == 'true'
-        run: |
-          aws s3 sync \
-            s3://${{ secrets.DEV_BUCKET }}/aviation/ \
-            s3://${{ secrets.STAGE_BUCKET_NAME }}/aviation/ \
-            --delete
-
-      
-      - name: Sync connect DEV → STAGE
-        if: steps.filter.outputs.connect == 'true'
-        run: |
-          aws s3 sync \
-            s3://${{ secrets.DEV_BUCKET }}/connect/ \
-            s3://${{ secrets.STAGE_BUCKET_NAME }}/connect/ \
-            --delete
-
-     
-      - name: Sync sli DEV → STAGE
-        if: steps.filter.outputs.sli == 'true'
-        run: |
-          aws s3 sync \
-            s3://${{ secrets.DEV_BUCKET }}/sli/ \
-            s3://${{ secrets.STAGE_BUCKET_NAME }}/sli/ \
-            --delete
-
-      
-      - name: Sync investor-insights DEV → STAGE
-        if: steps.filter.outputs.investor_insights == 'true'
-        run: |
-          aws s3 sync \
-            s3://${{ secrets.DEV_BUCKET }}/investor-insights/ \
-            s3://${{ secrets.STAGE_BUCKET_NAME }}/investor-insights/ \
-            --delete
+      - run: aws s3 sync s3://${{ secrets.DEV_BUCKET }}/aviation/ s3://${{ secrets.STAGE_BUCKET_NAME }}/aviation/
+      - run: aws s3 sync s3://${{ secrets.DEV_BUCKET }}/connect/ s3://${{ secrets.STAGE_BUCKET_NAME }}/connect/
+      - run: aws s3 sync s3://${{ secrets.DEV_BUCKET }}/sli/ s3://${{ secrets.STAGE_BUCKET_NAME }}/sli/
+      - run: aws s3 sync s3://${{ secrets.DEV_BUCKET }}/investor-insights/ s3://${{ secrets.STAGE_BUCKET_NAME }}/investor-insights/
