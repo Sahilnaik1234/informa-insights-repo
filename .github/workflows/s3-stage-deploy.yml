@@ -1,36 +1,83 @@
 name: Sync DEV S3 to STAGE S3
- 
+
 on:
   pull_request:
     branches:
       - stage
     types:
       - closed
- 
+
 permissions:
-  id-token: write    
-  contents: read    
- 
+  id-token: write
+  contents: read
+
 jobs:
   s3-sync:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
- 
+
     steps:
+      # 1️⃣ Checkout (needed for paths-filter)
       - name: Checkout Repository
         uses: actions/checkout@v4
- 
+
+      # 2️⃣ Detect which folder changed
+      - name: Detect changed folders
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            aviation:
+              - 'public/aviation/**'
+            connect:
+              - 'public/connect/**'
+            sli:
+              - 'public/sli/**'
+            investor_insights:
+              - 'public/investor-insights/**'
+
+      # 3️⃣ Configure AWS (STAGE role via OIDC)
       - name: Configure AWS (STAGE role via OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_STAGE_ROLE_ARN }}
           aws-region: ap-south-1
- 
+
       - name: Verify AWS identity
         run: aws sts get-caller-identity
- 
-      - name: Sync DEV S3 → STAGE S3
+
+      # 4️⃣ Sync ONLY aviation
+      - name: Sync aviation DEV → STAGE
+        if: steps.filter.outputs.aviation == 'true'
         run: |
-          aws s3 sync s3://${{ secrets.DEV_BUCKET }}/ s3://${{ secrets.STAGE_BUCKET_NAME }}/ --delete
- 
- 
+          aws s3 sync \
+            s3://${{ secrets.DEV_BUCKET }}/aviation/ \
+            s3://${{ secrets.STAGE_BUCKET_NAME }}/aviation/ \
+            --delete
+
+      # 5️⃣ Sync ONLY connect
+      - name: Sync connect DEV → STAGE
+        if: steps.filter.outputs.connect == 'true'
+        run: |
+          aws s3 sync \
+            s3://${{ secrets.DEV_BUCKET }}/connect/ \
+            s3://${{ secrets.STAGE_BUCKET_NAME }}/connect/ \
+            --delete
+
+      # 6️⃣ Sync ONLY sli
+      - name: Sync sli DEV → STAGE
+        if: steps.filter.outputs.sli == 'true'
+        run: |
+          aws s3 sync \
+            s3://${{ secrets.DEV_BUCKET }}/sli/ \
+            s3://${{ secrets.STAGE_BUCKET_NAME }}/sli/ \
+            --delete
+
+      # 7️⃣ Sync ONLY investor-insights
+      - name: Sync investor-insights DEV → STAGE
+        if: steps.filter.outputs.investor_insights == 'true'
+        run: |
+          aws s3 sync \
+            s3://${{ secrets.DEV_BUCKET }}/investor-insights/ \
+            s3://${{ secrets.STAGE_BUCKET_NAME }}/investor-insights/ \
+            --delete
