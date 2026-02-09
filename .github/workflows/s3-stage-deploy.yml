@@ -17,11 +17,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout (needed for paths-filter)
+     
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Detect which folder changed
+      
       - name: Detect changed folders
         id: filter
         uses: dorny/paths-filter@v2
@@ -36,7 +36,7 @@ jobs:
             investor_insights:
               - 'public/investor-insights/**'
 
-      # 3️⃣ Configure AWS (STAGE role via OIDC)
+      
       - name: Configure AWS (STAGE role via OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -46,7 +46,7 @@ jobs:
       - name: Verify AWS identity
         run: aws sts get-caller-identity
 
-      # 4️⃣ Sync ONLY aviation
+      
       - name: Sync aviation DEV → STAGE
         if: steps.filter.outputs.aviation == 'true'
         run: |
@@ -55,7 +55,7 @@ jobs:
             s3://${{ secrets.STAGE_BUCKET_NAME }}/aviation/ \
             --delete
 
-      # 5️⃣ Sync ONLY connect
+      
       - name: Sync connect DEV → STAGE
         if: steps.filter.outputs.connect == 'true'
         run: |
@@ -64,7 +64,7 @@ jobs:
             s3://${{ secrets.STAGE_BUCKET_NAME }}/connect/ \
             --delete
 
-      # 6️⃣ Sync ONLY sli
+     
       - name: Sync sli DEV → STAGE
         if: steps.filter.outputs.sli == 'true'
         run: |
@@ -73,7 +73,7 @@ jobs:
             s3://${{ secrets.STAGE_BUCKET_NAME }}/sli/ \
             --delete
 
-      # 7️⃣ Sync ONLY investor-insights
+      
       - name: Sync investor-insights DEV → STAGE
         if: steps.filter.outputs.investor_insights == 'true'
         run: |
