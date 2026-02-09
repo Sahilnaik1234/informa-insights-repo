@@ -6,86 +6,26 @@ on:
       confirm:
         description: "Type DEPLOY to confirm PROD deployment"
         required: true
-        default: ""
 
 permissions:
   id-token: write
-  contents: read
 
 jobs:
-  deploy-prod:
+  prod-sync:
     runs-on: ubuntu-latest
 
     steps:
-      
-      - name: Validate confirmation
-        run: |
+      - run: |
           if [ "${{ github.event.inputs.confirm }}" != "DEPLOY" ]; then
-            echo "❌ Confirmation failed. Type DEPLOY to proceed."
             exit 1
           fi
 
-      
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-    
-      - name: Detect changed folders
-        id: filter
-        uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            aviation:
-              - 'public/aviation/**'
-            connect:
-              - 'public/connect/**'
-            sli:
-              - 'public/sli/**'
-            investor_insights:
-              - 'public/investor-insights/**'
-
-        #  Assume PROD role (OIDC)
-      - name: Assume PROD role (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.PROD_ROLE_ARN }}
           aws-region: ap-south-1
 
-      - name: Verify AWS identity
-        run: aws sts get-caller-identity
-
-      
-      - name: Sync aviation to PROD
-        if: steps.filter.outputs.aviation == 'true'
-        run: |
-          aws s3 sync \
-            s3://${{ secrets.STAGE_BUCKET_NAME }}/aviation/ \
-            s3://${{ secrets.PROD_BUCKET_NAME }}/aviation/ \
-            --delete
-
-      
-      - name: Sync connect to PROD
-        if: steps.filter.outputs.connect == 'true'
-        run: |
-          aws s3 sync \
-            s3://${{ secrets.STAGE_BUCKET_NAME }}/connect/ \
-            s3://${{ secrets.PROD_BUCKET_NAME }}/connect/ \
-            --delete
-
-      
-      - name: Sync sli to PROD
-        if: steps.filter.outputs.sli == 'true'
-        run: |
-          aws s3 sync \
-            s3://${{ secrets.STAGE_BUCKET_NAME }}/sli/ \
-            s3://${{ secrets.PROD_BUCKET_NAME }}/sli/ \
-            --delete
-
-      
-      - name: Sync investor-insights to PROD
-        if: steps.filter.outputs.investor_insights == 'true'
-        run: |
-          aws s3 sync \
-            s3://${{ secrets.STAGE_BUCKET_NAME }}/investor-insights/ \
-            s3://${{ secrets.PROD_BUCKET_NAME }}/investor-insights/ \
-            --delete
+      - run: aws s3 sync s3://${{ secrets.STAGE_BUCKET_NAME }}/aviation/ s3://${{ secrets.PROD_BUCKET_NAME }}/aviation/
+      - run: aws s3 sync s3://${{ secrets.STAGE_BUCKET_NAME }}/connect/ s3://${{ secrets.PROD_BUCKET_NAME }}/connect/
+      - run: aws s3 sync s3://${{ secrets.STAGE_BUCKET_NAME }}/sli/ s3://${{ secrets.PROD_BUCKET_NAME }}/sli/
+      - run: aws s3 sync s3://${{ secrets.STAGE_BUCKET_NAME }}/investor-insights/ s3://${{ secrets.PROD_BUCKET_NAME }}/investor-insights/
