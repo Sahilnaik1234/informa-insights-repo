@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Validate manual confirmation
+      
       - name: Validate confirmation
         run: |
           if [ "${{ github.event.inputs.confirm }}" != "DEPLOY" ]; then
@@ -25,11 +25,11 @@ jobs:
             exit 1
           fi
 
-      # 2️⃣ Checkout repository (needed for paths-filter)
+      
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 3️⃣ Detect which folder changed (same logic as DEV/STAGE)
+    
       - name: Detect changed folders
         id: filter
         uses: dorny/paths-filter@v2
@@ -44,7 +44,7 @@ jobs:
             investor_insights:
               - 'public/investor-insights/**'
 
-      # 4️⃣ Assume PROD role using OIDC
+        #  Assume PROD role (OIDC)
       - name: Assume PROD role (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -54,7 +54,7 @@ jobs:
       - name: Verify AWS identity
         run: aws sts get-caller-identity
 
-      # 5️⃣ Sync ONLY aviation (STAGE → PROD)
+      
       - name: Sync aviation to PROD
         if: steps.filter.outputs.aviation == 'true'
         run: |
@@ -63,7 +63,7 @@ jobs:
             s3://${{ secrets.PROD_BUCKET_NAME }}/aviation/ \
             --delete
 
-      # 6️⃣ Sync ONLY connect (STAGE → PROD)
+      
       - name: Sync connect to PROD
         if: steps.filter.outputs.connect == 'true'
         run: |
@@ -72,7 +72,7 @@ jobs:
             s3://${{ secrets.PROD_BUCKET_NAME }}/connect/ \
             --delete
 
-      # 7️⃣ Sync ONLY sli (STAGE → PROD)
+      
       - name: Sync sli to PROD
         if: steps.filter.outputs.sli == 'true'
         run: |
@@ -81,7 +81,7 @@ jobs:
             s3://${{ secrets.PROD_BUCKET_NAME }}/sli/ \
             --delete
 
-      # 8️⃣ Sync ONLY investor-insights (STAGE → PROD)
+      
       - name: Sync investor-insights to PROD
         if: steps.filter.outputs.investor_insights == 'true'
         run: |
