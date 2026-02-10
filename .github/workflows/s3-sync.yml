@@ -13,60 +13,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-     
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      
-      - name: Detect changed folders
-        id: filter
-        uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            aviation:
-              - 'public/aviation/**'
-            connect:
-              - 'public/connect/**'
-            sli:
-              - 'public/sli/**'
-            investor_insights:
-              - 'public/investor-insights/**'
-
-     
-      - name: Configure AWS Credentials (DEV)
-        uses: aws-actions/configure-aws-credentials@v2
+      - uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
-     
-      - name: Sync aviation
-        if: steps.filter.outputs.aviation == 'true'
-        run: |
-          aws s3 sync public/aviation/ s3://${{ secrets.DEV_BUCKET }}/aviation/ \
-            --delete \
-            --size-only
+      - run: aws s3 sync public/ s3://${{ secrets.DEV_BUCKET }}/ --delete --size-only
 
-      
-      - name: Sync connect
-        if: steps.filter.outputs.connect == 'true'
-        run: |
-          aws s3 sync public/connect/ s3://${{ secrets.DEV_BUCKET }}/connect/ \
-            --delete \
-            --size-only
-
-      
-      - name: Sync sli
-        if: steps.filter.outputs.sli == 'true'
-        run: |
-          aws s3 sync public/sli/ s3://${{ secrets.DEV_BUCKET }}/sli/ \
-            --delete \
-            --size-only
-
-      - name: Sync investor-insights
-        if: steps.filter.outputs.investor_insights == 'true'
-        run: |
-          aws s3 sync public/investor-insights/ s3://${{ secrets.DEV_BUCKET }}/investor-insights/ \
-            --delete \
-            --size-only
